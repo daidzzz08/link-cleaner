@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Link Cleaner - Tí Lò Xo Tool</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --primary-color: #1877f2;
+            --text-color: #1c1e21;
+            --border-radius: 8px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        h2 { margin-bottom: 20px; color: var(--primary-color); }
+        .container {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            flex-grow: 1;
+        }
+        .box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        label { font-weight: bold; margin-bottom: 10px; }
+        textarea {
+            flex-grow: 1;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: var(--border-radius);
+            font-family: monospace;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+        }
+        textarea:focus { border-color: var(--primary-color); }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 15px;
+        }
+        button {
+            padding: 12px 24px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #166fe5; }
+        button.secondary { background-color: #42b72a; }
+        button.secondary:hover { background-color: #36a420; }
+        .stats { margin-top: 10px; font-size: 0.9em; color: #606770; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <h2>🛠️ Facebook Link Cleaner</h2>
+
+    <div class="container">
+        <div class="box">
+            <label for="input">Danh sách Link gốc (Có comment_id)</label>
+            <textarea id="input" placeholder="Dán danh sách link vào đây..."></textarea>
+        </div>
+
+        <div class="controls">
+            <button onclick="processLinks()">➡️ Xử lý Link</button>
+            <button class="secondary" onclick="copyOutput()">📋 Copy Kết quả</button>
+        </div>
+
+        <div class="box">
+            <label for="output">Danh sách Link sạch (Đã lọc)</label>
+            <textarea id="output" readonly placeholder="Kết quả sẽ hiện ở đây..."></textarea>
+        </div>
+    </div>
+    <div class="stats" id="stats"></div>
+
+    <script>
+        function processLinks() {
+            const input = document.getElementById('input').value;
+            const lines = input.split('\n');
+            const cleanLinks = [];
+            
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                // 1. Trích xuất URL từ dòng (loại bỏ text rác như '')
+                const urlMatch = line.match(/(https?:\/\/[^\s]+)/);
+                if (!urlMatch) return;
+
+                try {
+                    let url = new URL(urlMatch[0]);
+
+                    // 2. Logic làm sạch
+                    if (url.hostname.includes('facebook.com')) {
+                        // Trường hợp 1: Link dạng /posts/, /videos/, /watch/ -> Xóa hết query param
+                        if (url.pathname.includes('/posts/') || 
+                            url.pathname.includes('/videos/') || 
+                            url.pathname.includes('/watch/') ||
+                            url.pathname.includes('/photo.php')) { // photo.php thường có fbid trong query nhưng nếu dạng posts/pfbid thì clear được
+                            
+                            // Nếu là link posts/pfbid... thì ID nằm trong path, xóa search là an toàn nhất
+                            if (url.pathname.includes('/posts/')) {
+                                url.search = ""; 
+                            } else {
+                                // Giữ lại tham số nếu cần thiết, nhưng xóa comment_id
+                                url.searchParams.delete('comment_id');
+                                url.searchParams.delete('reply_comment_id');
+                                url.searchParams.delete('notif_id');
+                                url.searchParams.delete('notif_t');
+                                url.searchParams.delete('ref');
+                                url.searchParams.delete('fbclid');
+                            }
+                        } 
+                        // Trường hợp 2: Link dạng permalink.php -> Phải giữ lại story_fbid và id
+                        else if (url.pathname.includes('permalink.php')) {
+                            const paramsToKeep = ['story_fbid', 'id', 'v']; // v cho video đôi khi cần
+                            const currentParams = Array.from(url.searchParams.keys());
+                            
+                            currentParams.forEach(key => {
+                                if (!paramsToKeep.includes(key)) {
+                                    url.searchParams.delete(key);
+                                }
+                            });
+                        }
+                        // Trường hợp khác: Chỉ xóa comment_id và tracking
+                        else {
+                            url.searchParams.delete('comment_id');
+                            url.searchParams.delete('reply_comment_id');
+                            url.searchParams.delete('fbclid');
+                            url.searchParams.delete('ref');
+                            url.searchParams.delete('__cft__');
+                            url.searchParams.delete('__tn__');
+                        }
+                    }
+
+                    cleanLinks.push(url.toString());
+
+                } catch (e) {
+                    console.error("Lỗi parse URL:", line);
+                    // Nếu lỗi parse, giữ nguyên dòng gốc hoặc bỏ qua tùy nhu cầu. 
+                    // Ở đây ta giữ nguyên dòng trích xuất được.
+                    cleanLinks.push(urlMatch[0]); 
+                }
+            });
+
+            const result = cleanLinks.join('\n');
+            document.getElementById('output').value = result;
+            document.getElementById('stats').innerText = `Đã xử lý ${lines.length} dòng -> ${cleanLinks.length} link sạch.`;
+        }
+
+        function copyOutput() {
+            const output = document.getElementById('output');
+            output.select();
+            output.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(output.value).then(() => {
+                alert("Đã copy danh sách link sạch!");
+            });
+        }
+    </script>
+</body>
+</html>
