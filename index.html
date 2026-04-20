@@ -3,98 +3,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Link Cleaner - Tí Lò Xo Tool</title>
+    <title>FB Automation Toolkit - Tí Lò Xo</title>
+    <!-- Tailwind CSS cho UI phong cách Vercel/Apple -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root {
-            --bg-color: #f4f6f8;
-            --primary-color: #1877f2;
-            --text-color: #1c1e21;
-            --border-radius: 8px;
+        /* Tùy chỉnh thanh cuộn cho đẹp (Apple style) */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        
+        /* Font chữ hệ thống UI (San Francisco/Inter) */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        
+        /* Toast notification */
+        #toast {
+            visibility: hidden;
+            opacity: 0;
+            transform: translate(-50%, 20px);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            margin: 0;
-            height: 100vh;
-            box-sizing: border-box;
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            transform: translate(-50%, 0);
         }
-        h2 { margin-bottom: 20px; color: var(--primary-color); }
-        .container {
-            display: flex;
-            gap: 20px;
-            width: 100%;
-            max-width: 1200px;
-            flex-grow: 1;
+
+        /* Textarea focus ring */
+        textarea:focus {
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
         }
-        .box {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        label { font-weight: bold; margin-bottom: 10px; }
-        textarea {
-            flex-grow: 1;
-            padding: 15px;
-            border: 1px solid #ccc;
-            border-radius: var(--border-radius);
-            font-family: monospace;
-            font-size: 14px;
-            resize: none;
-            outline: none;
-        }
-        textarea:focus { border-color: var(--primary-color); }
-        .controls {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 15px;
-        }
-        button {
-            padding: 12px 24px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
-        }
-        button:hover { background-color: #166fe5; }
-        button.secondary { background-color: #42b72a; }
-        button.secondary:hover { background-color: #36a420; }
-        .stats { margin-top: 10px; font-size: 0.9em; color: #606770; text-align: center; }
     </style>
 </head>
-<body>
+<body class="bg-[#fafafa] text-gray-900 min-h-screen p-4 md:p-8">
 
-    <h2>🛠️ Facebook Link Cleaner</h2>
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <header class="mb-4">
+            <h1 class="text-3xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
+                <i data-lucide="command" class="w-8 h-8 text-black"></i>
+                Automation Toolkit
+            </h1>
+            <p class="text-gray-500 mt-2 text-sm">Bộ công cụ xử lý dữ liệu Auto Facebook nội bộ.</p>
+        </header>
 
-    <div class="container">
-        <div class="box">
-            <label for="input">Danh sách Link gốc (Có comment_id)</label>
-            <textarea id="input" placeholder="Dán danh sách link vào đây..."></textarea>
+        <!-- Tabs Navigation -->
+        <div class="flex space-x-6 border-b border-gray-200 mb-6">
+            <button onclick="switchTab('log')" id="tabBtn-log" class="pb-3 text-sm font-semibold text-gray-900 border-b-2 border-black transition-colors flex items-center gap-2">
+                <i data-lucide="terminal-square" class="w-4 h-4"></i> Log Analyzer
+            </button>
+            <button onclick="switchTab('link')" id="tabBtn-link" class="pb-3 text-sm font-medium text-gray-400 hover:text-gray-700 border-b-2 border-transparent transition-colors flex items-center gap-2">
+                <i data-lucide="link" class="w-4 h-4"></i> Link Cleaner
+            </button>
         </div>
 
-        <div class="controls">
-            <button onclick="processLinks()">➡️ Xử lý Link</button>
-            <button class="secondary" onclick="copyOutput()">📋 Copy Kết quả</button>
+        <!-- ========================================== -->
+        <!-- TAB 1: LOG ANALYZER -->
+        <!-- ========================================== -->
+        <div id="tab-log" class="block animate-fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left Column: Input -->
+                <div class="flex flex-col bg-white p-1 rounded-2xl shadow-sm border border-gray-200">
+                    <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-xl">
+                        <label for="logInput" class="font-semibold text-sm text-gray-700 flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-4 h-4"></i> Paste System Log Here
+                        </label>
+                        <button onclick="document.getElementById('logInput').value = ''; resetLogUI();" class="text-xs text-gray-400 hover:text-red-500 transition-colors">
+                            Clear
+                        </button>
+                    </div>
+                    <textarea id="logInput" 
+                        class="w-full flex-grow min-h-[500px] p-4 text-sm font-mono bg-white outline-none resize-none placeholder-gray-300"
+                        placeholder="[09:32:07] [61572576005825] 🚀 Processing...&#10;[09:32:26] [61572117181008] ✅ SUCCESS...&#10;[09:32:08] [61572576005825] 🛑 STOPPED: Reached Max Fails..."></textarea>
+                </div>
+
+                <!-- Right Column: Controls & Output -->
+                <div class="flex flex-col gap-6">
+                    <button onclick="analyzeLog()" class="w-full bg-black text-white hover:bg-gray-800 active:scale-[0.99] transition-all duration-200 py-4 rounded-xl font-medium shadow-md flex justify-center items-center gap-2">
+                        <i data-lucide="cpu" class="w-5 h-5"></i> Analyze Log Data
+                    </button>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+                        <!-- SUCCESS / LIVE -->
+                        <div class="flex flex-col bg-white p-1 rounded-2xl shadow-sm border border-gray-200">
+                            <div class="p-3 border-b border-gray-100 flex justify-between items-center bg-green-50/30 rounded-t-xl">
+                                <span class="font-semibold text-sm text-green-700 flex items-center gap-2">
+                                    <span class="relative flex h-2.5 w-2.5">
+                                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                                    </span> Live (Success)
+                                </span>
+                                <span id="liveCount" class="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded-full">0</span>
+                            </div>
+                            <textarea id="liveOutput" readonly class="w-full flex-grow p-3 text-sm font-mono bg-white outline-none resize-none h-[250px] text-gray-700"></textarea>
+                            <div class="p-2 border-t border-gray-50">
+                                <button onclick="copyText('liveOutput', 'Live IDs')" class="w-full py-2 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors flex justify-center items-center gap-2">
+                                    <i data-lucide="copy" class="w-4 h-4"></i> Copy Live IDs
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- FAILED / DEAD -->
+                        <div class="flex flex-col bg-white p-1 rounded-2xl shadow-sm border border-gray-200">
+                            <div class="p-3 border-b border-gray-100 flex justify-between items-center bg-red-50/30 rounded-t-xl">
+                                <span class="font-semibold text-sm text-red-600 flex items-center gap-2">
+                                    <i data-lucide="shield-alert" class="w-4 h-4"></i> Dead (Max Fails)
+                                </span>
+                                <span id="deadCount" class="text-xs font-bold bg-red-100 text-red-700 px-2 py-1 rounded-full">0</span>
+                            </div>
+                            <textarea id="deadOutput" readonly class="w-full flex-grow p-3 text-sm font-mono bg-white outline-none resize-none h-[250px] text-gray-700"></textarea>
+                            <div class="p-2 border-t border-gray-50">
+                                <button onclick="copyText('deadOutput', 'Dead IDs')" class="w-full py-2 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors flex justify-center items-center gap-2">
+                                    <i data-lucide="copy" class="w-4 h-4"></i> Copy Dead IDs
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="box">
-            <label for="output">Danh sách Link sạch (Đã lọc)</label>
-            <textarea id="output" readonly placeholder="Kết quả sẽ hiện ở đây..."></textarea>
+        <!-- ========================================== -->
+        <!-- TAB 2: LINK CLEANER -->
+        <!-- ========================================== -->
+        <div id="tab-link" class="hidden animate-fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left Column: Input -->
+                <div class="flex flex-col bg-white p-1 rounded-2xl shadow-sm border border-gray-200">
+                    <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-xl">
+                        <label for="linkInput" class="font-semibold text-sm text-gray-700 flex items-center gap-2">
+                            <i data-lucide="list" class="w-4 h-4"></i> Paste Raw Links Here
+                        </label>
+                        <button onclick="document.getElementById('linkInput').value = ''; resetLinkUI();" class="text-xs text-gray-400 hover:text-red-500 transition-colors">
+                            Clear
+                        </button>
+                    </div>
+                    <textarea id="linkInput" 
+                        class="w-full flex-grow min-h-[500px] p-4 text-sm font-mono bg-white outline-none resize-none placeholder-gray-300"
+                        placeholder="https://www.facebook.com/.../posts/pfbid...?comment_id=...&#10;https://www.facebook.com/permalink.php?story_fbid=...&id=...&comment_id=..."></textarea>
+                </div>
+
+                <!-- Right Column: Controls & Output -->
+                <div class="flex flex-col gap-6">
+                    <button onclick="processLinks()" class="w-full bg-black text-white hover:bg-gray-800 active:scale-[0.99] transition-all duration-200 py-4 rounded-xl font-medium shadow-md flex justify-center items-center gap-2">
+                        <i data-lucide="filter" class="w-5 h-5"></i> Clean Links
+                    </button>
+
+                    <div class="flex flex-col bg-white p-1 rounded-2xl shadow-sm border border-gray-200 h-full">
+                        <div class="p-3 border-b border-gray-100 flex justify-between items-center bg-blue-50/30 rounded-t-xl">
+                            <span class="font-semibold text-sm text-blue-700 flex items-center gap-2">
+                                <i data-lucide="check-circle" class="w-4 h-4"></i> Cleaned Links
+                            </span>
+                            <span id="cleanCount" class="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">0</span>
+                        </div>
+                        <textarea id="linkOutput" readonly class="w-full flex-grow p-4 text-sm font-mono bg-white outline-none resize-none min-h-[300px] text-gray-700"></textarea>
+                        <div class="p-2 border-t border-gray-50">
+                            <button onclick="copyText('linkOutput', 'Cleaned Links')" class="w-full py-3 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors flex justify-center items-center gap-2">
+                                <i data-lucide="copy" class="w-4 h-4"></i> Copy Cleaned Links
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+
     </div>
-    <div class="stats" id="stats"></div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 text-sm font-medium z-50">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-green-400" id="toastIcon"></i>
+        <span id="toastMessage">Copied to clipboard!</span>
+    </div>
 
     <script>
+        // Khởi tạo Icons
+        lucide.createIcons();
+
+        // --- TAB MANAGEMENT ---
+        function switchTab(tabName) {
+            // Update UI cho Tab Buttons
+            document.getElementById('tabBtn-log').className = `pb-3 text-sm flex items-center gap-2 transition-colors ${tabName === 'log' ? 'font-semibold text-gray-900 border-b-2 border-black' : 'font-medium text-gray-400 hover:text-gray-700 border-b-2 border-transparent'}`;
+            document.getElementById('tabBtn-link').className = `pb-3 text-sm flex items-center gap-2 transition-colors ${tabName === 'link' ? 'font-semibold text-gray-900 border-b-2 border-black' : 'font-medium text-gray-400 hover:text-gray-700 border-b-2 border-transparent'}`;
+
+            // Show/Hide Content
+            document.getElementById('tab-log').style.display = tabName === 'log' ? 'block' : 'none';
+            document.getElementById('tab-link').style.display = tabName === 'link' ? 'block' : 'none';
+        }
+
+        // --- TAB 1: LOG ANALYZER LOGIC ---
+        function analyzeLog() {
+            const rawText = document.getElementById('logInput').value;
+            if (!rawText.trim()) return;
+
+            const lines = rawText.split('\n');
+            const successSet = new Set();
+            const failedSet = new Set();
+
+            // Regex bắt UID nằm trong ngoặc vuông (Ví dụ: [61572117181008])
+            const uidRegex = /\[(\d{10,20})\]/;
+
+            lines.forEach(line => {
+                const match = line.match(uidRegex);
+                if (match) {
+                    const uid = match[1];
+                    if (line.includes('✅ SUCCESS')) {
+                        successSet.add(uid);
+                    } 
+                    else if (line.includes('🛑 STOPPED: Reached Max Fails')) {
+                        failedSet.add(uid);
+                    }
+                }
+            });
+
+            // Logic thông minh: Lọc Dead đè Live
+            failedSet.forEach(uid => {
+                if (successSet.has(uid)) successSet.delete(uid);
+            });
+
+            const successArr = Array.from(successSet);
+            const failedArr = Array.from(failedSet);
+
+            document.getElementById('liveOutput').value = successArr.join('\n');
+            document.getElementById('deadOutput').value = failedArr.join('\n');
+            document.getElementById('liveCount').innerText = successArr.length;
+            document.getElementById('deadCount').innerText = failedArr.length;
+
+            showToast(`Analysis complete: ${successArr.length} Live | ${failedArr.length} Dead`);
+        }
+
+        function resetLogUI() {
+            document.getElementById('liveOutput').value = '';
+            document.getElementById('deadOutput').value = '';
+            document.getElementById('liveCount').innerText = '0';
+            document.getElementById('deadCount').innerText = '0';
+        }
+
+        // --- TAB 2: LINK CLEANER LOGIC ---
         function processLinks() {
-            const input = document.getElementById('input').value;
+            const input = document.getElementById('linkInput').value;
+            if (!input.trim()) return;
+            
             const lines = input.split('\n');
             const cleanLinks = [];
             
@@ -102,26 +253,23 @@
                 line = line.trim();
                 if (!line) return;
 
-                // 1. Trích xuất URL từ dòng (loại bỏ text rác như '')
+                // Trích xuất URL (loại bỏ khoảng trắng/chữ thừa ở đầu nếu có)
                 const urlMatch = line.match(/(https?:\/\/[^\s]+)/);
                 if (!urlMatch) return;
 
                 try {
                     let url = new URL(urlMatch[0]);
 
-                    // 2. Logic làm sạch
                     if (url.hostname.includes('facebook.com')) {
-                        // Trường hợp 1: Link dạng /posts/, /videos/, /watch/ -> Xóa hết query param
+                        // Trạng thái 1: Posts, videos, watch (ID nằm ngay trong Path)
                         if (url.pathname.includes('/posts/') || 
                             url.pathname.includes('/videos/') || 
                             url.pathname.includes('/watch/') ||
-                            url.pathname.includes('/photo.php')) { // photo.php thường có fbid trong query nhưng nếu dạng posts/pfbid thì clear được
+                            url.pathname.includes('/photo.php')) { 
                             
-                            // Nếu là link posts/pfbid... thì ID nằm trong path, xóa search là an toàn nhất
                             if (url.pathname.includes('/posts/')) {
-                                url.search = ""; 
+                                url.search = ""; // Xóa sạch query
                             } else {
-                                // Giữ lại tham số nếu cần thiết, nhưng xóa comment_id
                                 url.searchParams.delete('comment_id');
                                 url.searchParams.delete('reply_comment_id');
                                 url.searchParams.delete('notif_id');
@@ -130,9 +278,9 @@
                                 url.searchParams.delete('fbclid');
                             }
                         } 
-                        // Trường hợp 2: Link dạng permalink.php -> Phải giữ lại story_fbid và id
+                        // Trạng thái 2: Permalink (ID nằm trong Query) -> Giữ story_fbid, id
                         else if (url.pathname.includes('permalink.php')) {
-                            const paramsToKeep = ['story_fbid', 'id', 'v']; // v cho video đôi khi cần
+                            const paramsToKeep = ['story_fbid', 'id', 'v'];
                             const currentParams = Array.from(url.searchParams.keys());
                             
                             currentParams.forEach(key => {
@@ -141,7 +289,7 @@
                                 }
                             });
                         }
-                        // Trường hợp khác: Chỉ xóa comment_id và tracking
+                        // Default: Xóa rác
                         else {
                             url.searchParams.delete('comment_id');
                             url.searchParams.delete('reply_comment_id');
@@ -151,29 +299,65 @@
                             url.searchParams.delete('__tn__');
                         }
                     }
-
                     cleanLinks.push(url.toString());
-
                 } catch (e) {
                     console.error("Lỗi parse URL:", line);
-                    // Nếu lỗi parse, giữ nguyên dòng gốc hoặc bỏ qua tùy nhu cầu. 
-                    // Ở đây ta giữ nguyên dòng trích xuất được.
                     cleanLinks.push(urlMatch[0]); 
                 }
             });
 
-            const result = cleanLinks.join('\n');
-            document.getElementById('output').value = result;
-            document.getElementById('stats').innerText = `Đã xử lý ${lines.length} dòng -> ${cleanLinks.length} link sạch.`;
+            document.getElementById('linkOutput').value = cleanLinks.join('\n');
+            document.getElementById('cleanCount').innerText = cleanLinks.length;
+            
+            showToast(`Cleaned ${cleanLinks.length} links successfully!`);
         }
 
-        function copyOutput() {
-            const output = document.getElementById('output');
-            output.select();
-            output.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(output.value).then(() => {
-                alert("Đã copy danh sách link sạch!");
+        function resetLinkUI() {
+            document.getElementById('linkOutput').value = '';
+            document.getElementById('cleanCount').innerText = '0';
+        }
+
+        // --- UTILS ---
+        function copyText(elementId, name) {
+            const textarea = document.getElementById(elementId);
+            if (!textarea.value) {
+                showToast('Nothing to copy!', true);
+                return;
+            }
+            textarea.select();
+            textarea.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                showToast(`Copied ${name} to clipboard!`);
             });
+        }
+
+        let toastTimeout;
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            toastMsg.innerText = message;
+            toast.className = `fixed bottom-10 left-1/2 px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 text-sm font-medium z-50 transition-all duration-300 ${isError ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'}`;
+            
+            // Đổi icon nếu lỗi
+            if (isError) {
+                toastIcon.setAttribute('data-lucide', 'alert-circle');
+                toastIcon.classList.remove('text-green-400');
+                toastIcon.classList.add('text-white');
+            } else {
+                toastIcon.setAttribute('data-lucide', 'check-circle-2');
+                toastIcon.classList.add('text-green-400');
+                toastIcon.classList.remove('text-white');
+            }
+            lucide.createIcons();
+
+            toast.classList.add('show');
+            
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
         }
     </script>
 </body>
